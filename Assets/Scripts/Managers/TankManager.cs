@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,6 +9,7 @@ public class TankManager
     
     public Color m_PlayerColor;
     public Transform m_SpawnPoint;
+    public float autoRefillDelay = 10f;
     [HideInInspector] public int m_PlayerNumber;
     [HideInInspector] public string m_ColoredPlayerText;
     [HideInInspector] public GameObject m_Instance;
@@ -16,8 +18,16 @@ public class TankManager
 
     private TankMovement m_Movement;
     private TankShooting m_Shooting;
+    private TankHealth health;
     private GameObject m_CanvasGameObject;
     private StateController m_StateController;
+    private bool isPlayer;
+    public bool IsPlayer{
+        get 
+        {
+            return isPlayer;
+        }
+    }
 
     public void SetupAI(List<Transform> wayPointList)
     {
@@ -26,6 +36,7 @@ public class TankManager
 
         m_Shooting = m_Instance.GetComponent<TankShooting>();
         m_Shooting.m_PlayerNumber = m_PlayerNumber;
+        m_Shooting.autoRefill = true;
 
         m_CanvasGameObject = m_Instance.GetComponentInChildren<Canvas>().gameObject;
         m_ColoredPlayerText = $"<color=#{ColorUtility.ToHtmlStringRGB(m_PlayerColor)}>PLAYER {m_PlayerNumber}</color>";
@@ -33,6 +44,9 @@ public class TankManager
         MeshRenderer[] renderers = m_Instance.GetComponentsInChildren<MeshRenderer>();
 
         for (int i = 0; i < renderers.Length; i++) renderers[i].material.color = m_PlayerColor;
+
+        health = m_Instance.GetComponent<TankHealth>();
+        isPlayer = false;
     }
 
 
@@ -50,6 +64,9 @@ public class TankManager
         MeshRenderer[] renderers = m_Instance.GetComponentsInChildren<MeshRenderer>();
 
         for (int i = 0; i < renderers.Length; i++) renderers[i].material.color = m_PlayerColor;
+
+        health = m_Instance.GetComponent<TankHealth>();
+        isPlayer = true;
     }
 
     public void DisableControl()
@@ -77,9 +94,23 @@ public class TankManager
     {
         m_Instance.transform.position = m_SpawnPoint.position;
         m_Instance.transform.rotation = m_SpawnPoint.rotation;
+        if (m_Movement != null)
+        {
+            m_Movement.ResetAim();
+        }
 
         m_Instance.SetActive(false);
         m_Instance.SetActive(true);
+    }
+
+    public bool CheckFlawless()
+    {
+        return health.Flawless;
+    }
+
+    public bool CheckPacifist()
+    {
+        return m_Shooting.CheckPacifist();
     }
 
 }

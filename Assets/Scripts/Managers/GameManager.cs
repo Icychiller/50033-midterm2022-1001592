@@ -1,18 +1,26 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+public enum Awards
+{
+    flawless = 0,
+    perfect = 1,
+    pacifist = 2
+}
 
 public class GameManager : MonoBehaviour
 {
     public int m_NumRoundsToWin = 5;            
     public float m_StartDelay = 3f;             
     public float m_EndDelay = 3f;               
+    public float awardsDelay = 2f;
     public CameraControl m_CameraControl;       
-    public Text m_MessageText;                  
+    public Text m_MessageText;
     public GameObject[] m_TankPrefabs;
     public TankManager[] m_Tanks;               
     public List<Transform> wayPointsForAI;
@@ -20,19 +28,34 @@ public class GameManager : MonoBehaviour
     private int m_RoundNumber;                  
     private WaitForSeconds m_StartWait;         
     private WaitForSeconds m_EndWait;           
+    private WaitForSeconds awardsWait;
     private TankManager m_RoundWinner;          
-    private TankManager m_GameWinner;           
+    private TankManager m_GameWinner;     
+    private TankManager previousWinner;      
+    private bool perfectWinner;
+    private bool printingAwards = false;
+
+    private bool[] awardChecklist;
 
 
     private void Start()
     {
         m_StartWait = new WaitForSeconds(m_StartDelay);
         m_EndWait = new WaitForSeconds(m_EndDelay);
+        awardsWait = new WaitForSeconds(awardsDelay);
 
         SpawnAllTanks();
         SetCameraTargets();
 
         StartCoroutine(GameLoop());
+
+        awardChecklist = new bool[Enum.GetNames(typeof(Awards)).Length];
+        for (int i = 0; i < awardChecklist.Length; i++)
+        {
+            awardChecklist[i] = false;
+        }
+        
+        perfectWinner = true;
     }
 
 
@@ -106,10 +129,28 @@ public class GameManager : MonoBehaviour
         m_RoundWinner = null;
 
         m_RoundWinner = GetRoundWinner();
-        if (m_RoundWinner != null) m_RoundWinner.m_Wins++;
+        if (m_RoundWinner != null) 
+        {
+            m_RoundWinner.m_Wins++;
+            if (previousWinner == null)
+            {
+                previousWinner = m_RoundWinner;
+            }
+            else if (m_RoundWinner != previousWinner)
+            {
+                Debug.Log("Perfect set to false");
+                perfectWinner = false;
+            }
+        }
+        
 
         m_GameWinner = GetGameWinner();
-
+        CheckAllAwards();
+        StartCoroutine(ShowAllAwards());
+        while (printingAwards)
+        {
+            yield return null;
+        }
         string message = EndMessage();
         m_MessageText.text = message;
 
@@ -188,5 +229,47 @@ public class GameManager : MonoBehaviour
     private void DisableTankControl()
     {
         for (int i = 0; i < m_Tanks.Length; i++) m_Tanks[i].DisableControl();
+    }
+
+    private void CheckAllAwards()
+    {
+        if (m_RoundWinner != null && m_RoundWinner.IsPlayer)
+        {
+            awardChecklist[(int)Awards.flawless] = m_RoundWinner.CheckFlawless();
+            awardChecklist[(int)Awards.pacifist] = m_RoundWinner.CheckPacifist();
+            Debug.Log(m_RoundWinner.CheckPacifist());
+        }
+        awardChecklist[(int)Awards.perfect] = perfectWinner;
+        Debug.Log(perfectWinner);
+    }
+
+    private IEnumerator ShowAllAwards()
+    {
+        printingAwards = true;
+        if(awardChecklist[(int)Awards.flawless])
+        {
+            Debug.Log("Flawless Clear");
+            m_MessageText.text = "FLAWLESS!";
+            yield return awardsWait;
+            m_MessageText.text = string.Empty;
+        }
+
+        if(awardChecklist[(int)Awards.pacifist])
+        {
+            Debug.Log("Pacifist Clear");
+            m_MessageText.text = "PACIFIST???";
+            yield return awardsWait;
+            m_MessageText.text = string.Empty;
+        }
+
+        if (m_GameWinner != null && awardChecklist[(int)Awards.perfect])
+        {
+            Debug.Log("Perfect Clear");
+            m_MessageText.text = "PERFECT!";
+            yield return awardsWait;
+            m_MessageText.text = string.Empty;
+        }
+        Debug.Log("Finished Printing Awards");
+        printingAwards = false;
     }
 }

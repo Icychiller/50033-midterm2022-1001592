@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 
 public class TankShooting : MonoBehaviour
 {
@@ -13,6 +14,9 @@ public class TankShooting : MonoBehaviour
     public float m_MinLaunchForce = 15f;
     public float m_MaxLaunchForce = 30f;
     public float m_MaxChargeTime = 0.75f;
+    public int maxAmmoCount = 6;
+    public float autoRefillDelay = 10f;
+    public bool autoRefill = false;
 
     private string m_FireButton;
     private float m_CurrentLaunchForce;
@@ -20,10 +24,17 @@ public class TankShooting : MonoBehaviour
     private bool m_Fired;
     private float nextFireTime;
 
+    private int shotsFired = 0;
+    private int ammoCount;
+    private bool refillingCycle = false;
+
     private void OnEnable()
     {
         m_CurrentLaunchForce = m_MinLaunchForce;
         m_AimSlider.value = m_MinLaunchForce;
+        shotsFired = 0;
+        ammoCount = maxAmmoCount;
+        refillingCycle = false;
     }
 
 
@@ -38,7 +49,7 @@ public class TankShooting : MonoBehaviour
     {
         m_AimSlider.value = m_MinLaunchForce;
 
-        if (m_CurrentLaunchForce >= m_MaxLaunchForce && !m_Fired)
+        if (m_CurrentLaunchForce >= m_MaxLaunchForce && !m_Fired && ammoCount > 0)
         {
             m_CurrentLaunchForce = m_MaxLaunchForce;
             Fire(m_CurrentLaunchForce, 1);
@@ -56,9 +67,13 @@ public class TankShooting : MonoBehaviour
             m_CurrentLaunchForce += m_ChargeSpeed * Time.deltaTime;
             m_AimSlider.value = m_CurrentLaunchForce;
         }
-        else if (Input.GetButtonUp(m_FireButton) && !m_Fired)
+        else if (Input.GetButtonUp(m_FireButton) && !m_Fired && ammoCount > 0)
         {
             Fire(m_CurrentLaunchForce, 1);
+        }
+        if (autoRefill && !refillingCycle)
+        {
+            StartCoroutine(AiRefill());
         }
     }
 
@@ -77,7 +92,30 @@ public class TankShooting : MonoBehaviour
         m_ShootingAudio.clip = m_FireClip;
         m_ShootingAudio.Play();
 
+        shotsFired++;
+        ammoCount--;
+
         m_CurrentLaunchForce = m_MinLaunchForce;
     }
+
+    public bool CheckPacifist()
+    {
+        return shotsFired == 0;
+    }
+
+    public void refillAmmo()
+    {
+        ammoCount = maxAmmoCount;
+    }
     
+    IEnumerator AiRefill()
+    {
+        refillingCycle = true;
+        while(gameObject.activeInHierarchy)
+        {
+            
+            yield return new WaitForSeconds(autoRefillDelay);
+            refillAmmo();
+        }
+    }
 }

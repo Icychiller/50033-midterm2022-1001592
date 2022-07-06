@@ -15,6 +15,14 @@ public class TankHealth : MonoBehaviour
     private float m_CurrentHealth;  
     private bool m_Dead;            
 
+    private bool flawless;
+    public bool Flawless
+    {
+        get{
+            return flawless;
+        }
+    }
+
 
     private void Awake()
     {
@@ -22,6 +30,7 @@ public class TankHealth : MonoBehaviour
         m_ExplosionAudio = m_ExplosionParticles.GetComponent<AudioSource>();
 
         m_ExplosionParticles.gameObject.SetActive(false);
+        
     }
 
 
@@ -29,7 +38,7 @@ public class TankHealth : MonoBehaviour
     {
         m_CurrentHealth = m_StartingHealth;
         m_Dead = false;
-
+        flawless = true;
         SetHealthUI();
     }
 
@@ -37,7 +46,7 @@ public class TankHealth : MonoBehaviour
     {
         // Adjust the tank's current health, update the UI based on the new health and check whether or not the tank is dead.
         m_CurrentHealth -= amount;
-
+        flawless = false;
         SetHealthUI();
         if (m_CurrentHealth <= 0f && !m_Dead) OnDeath();
     }

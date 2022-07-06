@@ -11,6 +11,12 @@ public class TankMovement : MonoBehaviour
     public AudioClip m_EngineDriving;      
     public float m_PitchRange = 0.2f;
 
+    // New content Here:
+    [Header("Turret Settings")]
+    public Transform turretObject;
+    private float turretTurnSpeed = 2f;
+    private Vector3 targetPosition;
+    // End of new content
 
     private string m_MovementAxisName;     
     private string m_TurnAxisName;         
@@ -55,6 +61,9 @@ public class TankMovement : MonoBehaviour
         m_TurnInputValue = Input.GetAxis(m_TurnAxisName);
 
         EngineAudio ();
+
+        // Store Player's mouse position
+        SetMouseLookDirection();
     }
 
 
@@ -78,6 +87,8 @@ public class TankMovement : MonoBehaviour
         // Move and turn the tank.
         Move();
         Turn();
+
+        Aim();
     }
 
 
@@ -95,5 +106,32 @@ public class TankMovement : MonoBehaviour
         float turn = m_TurnInputValue * m_TurnSpeed * Time.deltaTime;
         Quaternion turnRotation = Quaternion.Euler(0f, turn, 0f);
         m_Rigidbody.MoveRotation(m_Rigidbody.rotation * turnRotation);
+    }
+
+    /// <Summary> Sets targeting position from mouse position on a Ground layer object </Summary>
+    private void SetMouseLookDirection()
+    {
+        int layer_mask = LayerMask.GetMask("Ground");
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+        if (Physics.Raycast(ray, out hit, 500f, layer_mask))
+        {
+            targetPosition = hit.point;
+        }
+    }
+
+    // Calculates and updates Turret Rotation based on Mouse Position
+    // Ref: https://answers.unity.com/questions/351899/rotation-lerp.html
+    private void Aim()
+    {
+        Vector3 lookVector = targetPosition- transform.position;
+        Vector3 newRotation = Quaternion.LookRotation(lookVector).eulerAngles;
+        newRotation = Vector3.Scale(new Vector3(0,1,0), newRotation);
+        turretObject.rotation = Quaternion.Slerp(turretObject.rotation, Quaternion.Euler(newRotation), Time.deltaTime * turretTurnSpeed);
+    }
+
+    public void ResetAim()
+    {
+        turretObject.rotation = Quaternion.Euler(0,180,0);
     }
 }
